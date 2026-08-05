@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
       default: "student",
     },
 
-    phone: {
+    phoneNumber: {
       type: String,
       default: "",
     },
@@ -36,6 +36,58 @@ const userSchema = new mongoose.Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+
+    bio: {
+      type: String,
+      default: "",
+    },
+
+    skills: [
+      {
+        type: String,
+      },
+    ],
+
+    profilePhoto: {
+      type: String,
+      default: "",
+    },
+
+    resume: {
+      type: String,
+      default: "",
+    },
+
+    resumeOriginalName: {
+      type: String,
+      default: "",
+    },
+
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+      default: null,
+    },
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    portfolio: {
+      type: String,
+      default: "",
+    },
+
+    linkedin: {
+      type: String,
+      default: "",
+    },
+
+    github: {
+      type: String,
+      default: "",
     },
   },
   {
