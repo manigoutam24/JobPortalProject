@@ -1,8 +1,10 @@
 const User = require("../models/userModel");
 const bcrypt = require("bcrypt");
 const JWT = require("jsonwebtoken");
+const getDataUri = require("../utils/dataUri");
+const cloudinary = require("../config/cloudinary");
 
-const test = (req, res) => {
+const profile = (req, res) => {
   res.json(req.user);
 };
 
@@ -111,20 +113,34 @@ const loginController = async (req, res) => {
 };
 
 const updateProfile = async (req, res) => {
+  console.log(cloudinary);
+  console.log(cloudinary.uploader);
   try {
     const user = req.user;
-    // console.log(user);
+    const file = req.file;
 
     let { fullName, phoneNumber, bio, skills } = req.body;
 
-    if (skills) {
-      skills = skills.split(",").map((skill) => skill.trim());
+    // Upload resume if provided
+    if (file) {
+      const fileUri = getDataUri(file);
+
+      const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+        resource_type: "raw",
+        folder: "job-portal/resumes",
+      });
+
+      user.resume = cloudResponse.secure_url;
+      user.resumeOriginalName = file.originalname;
     }
 
+    // Convert skills string into array
     if (skills) {
+      skills = skills.split(",").map((skill) => skill.trim());
       user.skills = skills;
     }
 
+    // Update only provided fields
     if (fullName) {
       user.fullName = fullName;
     }
@@ -139,21 +155,23 @@ const updateProfile = async (req, res) => {
 
     await user.save();
 
-    return res.status(200).send({
+    return res.status(200).json({
       success: true,
-      message: "Profile Update Successfully",
+      message: "Profile updated successfully",
+      user,
     });
   } catch (error) {
-    console.log(error);
-    res.status(500).send({
+    console.error(error);
+
+    return res.status(500).json({
       success: false,
-      message: "Someting went wrong",
+      message: "Something went wrong",
     });
   }
 };
 
 module.exports = {
-  test,
+  profile,
   registerController,
   loginController,
   updateProfile,
