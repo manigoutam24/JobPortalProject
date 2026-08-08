@@ -116,10 +116,10 @@ const updateProfile = async (req, res) => {
   console.log(cloudinary);
   console.log(cloudinary.uploader);
   try {
+    let { fullName, phoneNumber, bio, skills } = req.body;
+
     const user = req.user;
     const file = req.file;
-
-    let { fullName, phoneNumber, bio, skills } = req.body;
 
     // Upload resume if provided
     if (file) {
@@ -170,9 +170,107 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const updateProfilePhoto = async (req, res) => {
+  try {
+    const user = req.user;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(401).send({
+        success: false,
+        message: "Profile photo is required",
+      });
+    }
+
+    const fileUri = getDataUri(file);
+
+    const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+      resource_type: "image",
+      folder: "job-portal/profile-photos",
+    });
+
+    user.profilePhoto = cloudResponse.secure_url;
+
+    await user.save();
+
+    res.status(200).send({
+      success: true,
+      message: "ProfilePhoto upload Successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Somethink Went Wrong",
+    });
+  }
+};
+
+const logoutController = (req, res) => {
+  try {
+    res.clearCookie("token");
+
+    return res.status(201).send({
+      success: true,
+      message: "Logout Successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    let { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(401).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).send({
+        success: false,
+        message: "Invalid credentials",
+      });
+    }
+
+    const hashNewPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashNewPassword;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
+    });
+
+    // console.log(isMatch);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
+};
+
 module.exports = {
   profile,
   registerController,
   loginController,
   updateProfile,
+  updateProfilePhoto,
+  logoutController,
+  changePassword,
 };
