@@ -113,12 +113,15 @@ const loginController = async (req, res) => {
 };
 
 const updateProfile = async (req, res) => {
-  console.log(cloudinary);
-  console.log(cloudinary.uploader);
+  // console.log(cloudinary);
+  // console.log(cloudinary.uploader);
   try {
     let { fullName, phoneNumber, bio, skills } = req.body;
 
+    //from Middleware
     const user = req.user;
+
+    //from request.file
     const file = req.file;
 
     // Upload resume if provided
@@ -236,7 +239,7 @@ const changePassword = async (req, res) => {
         message: "User not found",
       });
     }
-    
+
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(401).send({
