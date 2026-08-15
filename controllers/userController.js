@@ -4,10 +4,6 @@ const JWT = require("jsonwebtoken");
 const getDataUri = require("../utils/dataUri");
 const cloudinary = require("../config/cloudinary");
 
-const profile = (req, res) => {
-  res.json(req.user);
-};
-
 const registerController = async (req, res) => {
   try {
     const { fullName, email, password, role, phone, isVerified } = req.body;
@@ -64,6 +60,14 @@ const loginController = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    //!  VALIDATE DATE
+    if (!email || !password) {
+      return res.status(400).send({
+        success: false,
+        message: "Please provide email or password",
+      });
+    }
+
     const user = await User.findOne({ email });
     //? validate
     if (!user) {
@@ -104,12 +108,17 @@ const loginController = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log(error);
+
     res.status(500).send({
       success: false,
       message: "Login API",
     });
-    console.log(error);
   }
+};
+
+const profile = (req, res) => {
+  res.json(req.user);
 };
 
 const updateProfile = async (req, res) => {
@@ -118,13 +127,13 @@ const updateProfile = async (req, res) => {
   try {
     let { fullName, phoneNumber, bio, skills } = req.body;
 
-    //from Middleware
+    //?from isAuthenticated Middleware
     const user = req.user;
 
     //from request.file
     const file = req.file;
 
-    // Upload resume if provided
+    //! Upload resume if provided
     if (file) {
       const fileUri = getDataUri(file);
 
@@ -137,13 +146,13 @@ const updateProfile = async (req, res) => {
       user.resumeOriginalName = file.originalname;
     }
 
-    // Convert skills string into array
+    //* Convert skills string into array
     if (skills) {
       skills = skills.split(",").map((skill) => skill.trim());
       user.skills = skills;
     }
 
-    // Update only provided fields
+    //?. Update only provided fields
     if (fullName) {
       user.fullName = fullName;
     }

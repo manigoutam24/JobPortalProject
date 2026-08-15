@@ -1,4 +1,6 @@
+const cloudinary = require("../config/cloudinary");
 const companyModel = require("../models/companyModel");
+const getDataUri = require("../utils/dataUri");
 
 const createCompany = async (req, res) => {
   try {
@@ -159,6 +161,7 @@ const deleteCompany = async (req, res) => {
         message: "You are not authorized to delete this company",
       });
     }
+
     const deleteCompany = await companyModel.findByIdAndDelete(companyId);
 
     return res.status(200).send({
@@ -175,10 +178,80 @@ const deleteCompany = async (req, res) => {
   }
 };
 
+const updateCompanyLogo = async (req, res) => {
+  try {
+    //!getID ans FILE
+    const { companyId } = req.params;
+    const file = req.file;
+
+    //!validate file
+    if (!file) {
+      return res.status(400).send({
+        success: false,
+        message: "File not found",
+      });
+    }
+
+    //!validate companyID
+    if (!companyId) {
+      return res.status(400).send({
+        success: false,
+        message: "Npo companty found with this ID",
+      });
+    }
+
+    //!getCompany
+    const company = await companyModel.findById(companyId);
+
+    //!Validate Company
+    if (!company) {
+      return res.status(400).send({
+        success: false,
+        message: "No company Found",
+      });
+    }
+
+    //!CHECH OWNERSHIP
+    if (!company.createdBy.equals(req.user._id)) {
+      return res.status(403).send({
+        success: false,
+        message: "You are not authorized to update logo of this company",
+      });
+    }
+
+    //!CONVERTDATA
+    const fileUri = getDataUri(file);
+
+    //!UPLOAD TO CLOUDINARY
+    const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+      resource_type: "image",
+      folder: "job-portal/company-logos",
+    });
+
+    //!SAVE URL IN COMPANYMODEL
+    company.logo = cloudResponse.secure_url;
+
+    await company.save();
+
+    return res.status(200).send({
+      success: true,
+      message: "Logo update Successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Error in UpdateLogo API",
+    });
+  }
+};
+
 module.exports = {
   createCompany,
   getCompany,
   getCompanyById,
   updateCompany,
   deleteCompany,
+  updateCompanyLogo,
 };
