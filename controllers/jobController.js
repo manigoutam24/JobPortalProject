@@ -80,50 +80,78 @@ const jobCreateController = async (req, res) => {
 
 const getAllJob = async (req, res) => {
   try {
-    const { keyword, location } = req.query;
+    const {
+      keyword,
+      location,
+      minSalary,
+      maxSalary,
+      jobType,
+      experienceLevel,
+      skills,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const skip = (page - 1) * Number(limit);
 
     let query = {};
 
-    if (keyword && location) {
-      query = {
-        $and: [
-          {
-            $or: [
-              {
-                title: {
-                  $regex: keyword,
-                  $options: "i",
-                },
-              },
-              {
-                description: {
-                  $regex: keyword,
-                  $options: "i",
-                },
-              },
-              {
-                skills: {
-                  $regex: keyword,
-                  $options: "i",
-                },
-              },
-            ],
-          },
-          {
-            location: {
-              $regex: location,
-              $options: "i",
-            },
-          },
-        ],
+    if (jobType) {
+      query.jobType = jobType;
+    }
+
+    if (experienceLevel) {
+      query.experienceLevel = experienceLevel;
+    }
+
+    if (skills) {
+      query.skills = {
+        $in: [skills],
       };
     }
 
-    const jobs = await JobModel.find(query).populate("company");
+    if (keyword) {
+      query.$or = [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+        { skills: { $regex: keyword, $options: "i" } },
+      ];
+    }
+
+    if (location) {
+      query.location = {
+        $regex: location,
+        $options: "i",
+      };
+    }
+
+    if (minSalary || maxSalary) {
+      query.salary = {};
+
+      if (minSalary) {
+        query.salary.$gte = Number(minSalary);
+      }
+
+      if (maxSalary) {
+        query.salary.$lte = Number(maxSalary);
+      }
+    }
+
+    const totalJobs = await JobModel.countDocuments(query);
+    const totalPages = Math.ceil(totalJobs / Number(limit));
+
+    const jobs = await JobModel.find(query)
+      .skip(skip)
+      .limit(Number(limit))
+      .populate("company");
 
     return res.status(200).send({
       success: true,
       message: "Jobs fetched successfully",
+      totalJobs,
+      currentPage: Number(page),
+      totalPages,
+      jobsPerPage: Number(limit),
       jobs,
     });
   } catch (error) {
