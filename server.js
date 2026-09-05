@@ -20,6 +20,7 @@ app.use(cookieParser());
 app.use("/user", require("./routes/userRoute"));
 app.use("/company", require("./routes/companyRoute"));
 app.use("/job", require("./routes/jobRoute"));
+app.use("/application", require("./routes/applicationRoute"));
 
 app.listen(process.env.PORT, () => {
   console.log(`Port is listen on ${process.env.PORT}`);
