@@ -2,11 +2,11 @@ const express = require("express");
 const {
   registerController,
   loginController,
-  profile,
   updateProfile,
   updateProfilePhoto,
   logoutController,
   changePassword,
+  getProfile,
 } = require("../controllers/userController");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const upload = require("../middlewares/multer");
@@ -17,7 +17,7 @@ router.post("/register", registerController);
 
 router.post("/login", loginController);
 
-router.get("/profile", isAuthenticated, profile);
+router.get("/profile", isAuthenticated, getProfile);
 
 router.put(
   "/profile/update",

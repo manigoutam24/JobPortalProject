@@ -117,8 +117,20 @@ const loginController = async (req, res) => {
   }
 };
 
-const profile = (req, res) => {
-  res.json(req.user);
+const getProfile = (req, res) => {
+  try {
+    return res.status(200).send({
+      success: true,
+      message: "Profile fetched Successfully",
+      user: req.user,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong",
+    });
+  }
 };
 
 const updateProfile = async (req, res) => {
@@ -278,7 +290,7 @@ const changePassword = async (req, res) => {
 };
 
 module.exports = {
-  profile,
+  getProfile,
   registerController,
   loginController,
   updateProfile,
