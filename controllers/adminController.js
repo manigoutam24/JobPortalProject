@@ -1,4 +1,6 @@
+const Application = require("../models/application");
 const Company = require("../models/companyModel");
+const JobModel = require("../models/jobModel");
 const User = require("../models/userModel");
 
 const getAllUser = async (req, res) => {
@@ -143,10 +145,174 @@ const deleteCompany = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    
+
     return res.status(500).send({
       success: false,
       message: "Something went wrong",
+    });
+  }
+};
+
+const getAllJobs = async (req, res) => {
+  try {
+    const jobs = await JobModel.find().populate("company");
+
+    if (jobs.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Jobs Not Found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Jobs fetched successfully",
+      jobs,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Something went wrong in API",
+    });
+  }
+};
+
+const deleteJob = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).send({
+        success: false,
+        message: "Job Id is Required",
+      });
+    }
+
+    const job = await JobModel.findById(jobId);
+
+    if (!job) {
+      return res.status(404).send({
+        success: false,
+        message: "Job not Found",
+      });
+    }
+
+    const deletedJob = await JobModel.findByIdAndDelete(jobId);
+
+    return res.status(200).send({
+      success: true,
+      message: "Job deleted successfully",
+      deletedJob,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Something Went wrong in API",
+    });
+  }
+};
+
+const getAllApplications = async (req, res) => {
+  try {
+    const applications = await Application.find()
+      .populate("applicant")
+      .populate("job");
+
+    if (applications.length === 0) {
+      return res.status(404).send({
+        success: false,
+        message: "Applications not found",
+      });
+    }
+
+    return res.status(200).send({
+      success: true,
+      message: "Job fetched Successfully",
+      applications,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Somethong went Wrong in API",
+    });
+  }
+};
+
+const getApplicationById = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    if (!applicationId) {
+      return res.status(400).send({
+        success: false,
+        message: "Application ID required",
+      });
+    }
+
+    const application = await Application.findById(applicationId)
+      .populate("applicant")
+      .populate("job");
+
+    if (!application) {
+      return res.status(404).send({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    return res.status(200).send({
+      success: true,
+      message: "Application fetched successfully",
+      application,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Something went wrong in API",
+    });
+  }
+};
+
+const deleteApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+
+    if (!applicationId) {
+      return res.status(400).send({
+        success: false,
+        message: "Appliaction ID not fetched",
+      });
+    }
+
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).send({
+        success: false,
+        message: "Application not Fetched",
+      });
+    }
+
+    const deletedApplication =
+      await Application.findByIdAndDelete(applicationId);
+    return res.status(200).send({
+      success: true,
+      message: "Application Deleted Successfully",
+      deletedApplication,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).send({
+      success: false,
+      message: "Something went Wrong in API",
     });
   }
 };
@@ -157,4 +323,9 @@ module.exports = {
   deleteUser,
   getAllCompanies,
   deleteCompany,
+  getAllJobs,
+  deleteJob,
+  getAllApplications,
+  getApplicationById,
+  deleteApplication,
 };
