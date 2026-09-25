@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Application = require("../models/application");
 const Company = require("../models/companyModel");
 const JobModel = require("../models/jobModel");
@@ -255,6 +256,13 @@ const getApplicationById = async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Application Id is not matched",
+      });
+    }
+
     const application = await Application.findById(applicationId)
       .populate("applicant")
       .populate("job");
@@ -289,6 +297,13 @@ const deleteApplication = async (req, res) => {
       return res.status(400).send({
         success: false,
         message: "Appliaction ID not fetched",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Application Id not Fetched",
       });
     }
 

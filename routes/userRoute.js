@@ -10,8 +10,8 @@ const {
 } = require("../controllers/userController");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const upload = require("../middlewares/multer");
+const uploadProfilePhoto = require("../middlewares/uploadprofilePhoto");
 const router = express.Router();
-
 
 router.post("/register", registerController);
 
@@ -29,7 +29,7 @@ router.put(
 router.put(
   "/profile/photo",
   isAuthenticated,
-  upload.single("profilePhoto"),
+  uploadProfilePhoto.single("profilePhoto"),
   updateProfilePhoto,
 );
 

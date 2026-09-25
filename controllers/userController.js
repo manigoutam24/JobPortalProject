@@ -6,13 +6,20 @@ const cloudinary = require("../config/cloudinary");
 
 const registerController = async (req, res) => {
   try {
-    const { fullName, email, password, role, phone, isVerified } = req.body;
+    const { fullName, email, password, phone } = req.body;
 
     //! validdate
-    if (!fullName || !email || !password || !role || !phone) {
-      return res.status(404).send({
+    if (!fullName || !email || !password || !phone) {
+      return res.status(400).send({
         success: false,
         message: "Required all fields!",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).send({
+        success: false,
+        message: "Password must be at least 8 characters",
       });
     }
 
@@ -20,7 +27,7 @@ const registerController = async (req, res) => {
 
     // * Validation for Existing User
     if (existingUser) {
-      return res.status(404).send({
+      return res.status(409).send({
         success: false,
         message: "User Already exist",
       });
@@ -36,16 +43,19 @@ const registerController = async (req, res) => {
       fullName,
       email,
       password: hashPassword,
-      role,
+      role: "student",
       phone,
-      isVerified,
     });
+
     await newUser.save();
+
+    const userResponse = newUser.toObject();
+    delete userResponse.password;
 
     res.status(201).send({
       success: true,
       message: "User Register",
-      newUser,
+      user: userResponse,
     });
   } catch (error) {
     console.log(error);
@@ -60,7 +70,7 @@ const loginController = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    //!  VALIDATE DATE
+    //!  VALIDATE DATA
     if (!email || !password) {
       return res.status(400).send({
         success: false,
@@ -71,18 +81,18 @@ const loginController = async (req, res) => {
     const user = await User.findOne({ email });
     //? validate
     if (!user) {
-      return res.status(404).send({
+      return res.status(401).send({
         success: false,
-        message: "Invalid Crediantals",
+        message: "Invalid credentials",
       });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     //? Validation for compare password
     if (!isMatch) {
-      return res.status(404).send({
+      return res.status(401).send({
         success: false,
-        message: "Invalid Crediantials",
+        message: "Invalid credentials",
       });
     }
 
@@ -119,10 +129,13 @@ const loginController = async (req, res) => {
 
 const getProfile = (req, res) => {
   try {
+    const userResponse = req.user.toObject();
+    delete userResponse.password;
+
     return res.status(200).send({
       success: true,
       message: "Profile fetched Successfully",
-      user: req.user,
+      user: userResponse,
     });
   } catch (error) {
     console.log(error);
@@ -138,6 +151,68 @@ const updateProfile = async (req, res) => {
   // console.log(cloudinary.uploader);
   try {
     let { fullName, phoneNumber, bio, skills } = req.body;
+
+    if (
+      (fullName !== undefined && fullName.trim().length < 3) ||
+      !/^[A-Za-z ]+$/.test(fullName.trim())
+    ) {
+      return res.status(400).send({
+        success: false,
+        message: "Name must be at least 3 characters",
+      });
+    }
+
+    if (phoneNumber !== undefined && !/^\d{10}$/.test(phoneNumber)) {
+      return res.status(400).send({
+        success: false,
+        message: "Phone must be at least 10 digits",
+      });
+    }
+
+    if (skills !== undefined) {
+      const skillList = skills.split(",").map((skill) => skill.trim());
+
+      if (skillList.some((skill) => skill === "")) {
+        return res.status(400).send({
+          success: false,
+          message: "Skills cannot be empty",
+        });
+      }
+
+      if (skillList.some((skill) => skill.length > 30)) {
+        return res.status(400).send({
+          success: false,
+          message: "Each skill must be 30 characters or less",
+        });
+      }
+
+      const normalzedSkill = skillList.map((skill) => skill.toLowerCase());
+
+      const uniqueSkills = new Set(skillList);
+
+      if (normalzedSkill.length > uniqueSkills.size) {
+        return res.status(400).send({
+          success: false,
+          message: "Duplicate skills are not allowed",
+        });
+      }
+
+      if (skillList.length > 15) {
+        return res.status(400).send({
+          success: false,
+          message: "Maximum 15 skill must be allowed",
+        });
+      }
+
+      user.skills = skillList;
+    }
+
+    if (bio !== undefined && bio.length > 500) {
+      return res.status(400).send({
+        success: false,
+        message: "Bio must be 500 characters or less",
+      });
+    }
 
     //?from isAuthenticated Middleware
     const user = req.user;
@@ -179,10 +254,13 @@ const updateProfile = async (req, res) => {
 
     await user.save();
 
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user,
+      user: userResponse,
     });
   } catch (error) {
     console.error(error);
@@ -200,7 +278,7 @@ const updateProfilePhoto = async (req, res) => {
     const file = req.file;
 
     if (!file) {
-      return res.status(401).send({
+      return res.status(400).send({
         success: false,
         message: "Profile photo is required",
       });
@@ -252,10 +330,31 @@ const changePassword = async (req, res) => {
   try {
     let { currentPassword, newPassword } = req.body;
 
+    if (!currentPassword || !newPassword) {
+      return res.status(400).send({
+        success: false,
+        message: "Current password and new password are required",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).send({
+        success: false,
+        message: "New password must be at least 8 characters",
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).send({
+        success: false,
+        message: "New password must be different from current password",
+      });
+    }
+
     const user = await User.findById(req.user._id);
 
     if (!user) {
-      return res.status(401).send({
+      return res.status(404).send({
         success: false,
         message: "User not found",
       });
