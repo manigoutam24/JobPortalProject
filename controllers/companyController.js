@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const cloudinary = require("../config/cloudinary");
 const companyModel = require("../models/companyModel");
 const getDataUri = require("../utils/dataUri");
@@ -87,10 +88,10 @@ const updateCompany = async (req, res) => {
     const { companyId } = req.params;
 
     //! validate companyID
-    if (!companyId) {
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
       return res.status(400).send({
         success: false,
-        message: "Company ID is required",
+        message: "Invalid company ID",
       });
     }
 
@@ -104,9 +105,9 @@ const updateCompany = async (req, res) => {
       });
     }
 
-    console.log("company.createdBy:", company.createdBy);
-    console.log("req.user:", req.user);
-    console.log("req.user._id:", req.user?._id);
+    // console.log("company.createdBy:", company.createdBy);
+    // console.log("req.user:", req.user);
+    // console.log("req.user._id:", req.user?._id);
 
     //! CHECK OWNERSHIP BETWEEN CREATEDBY AND EXISTING USER
     if (!company.createdBy.equals(req.user._id)) {
@@ -116,10 +117,35 @@ const updateCompany = async (req, res) => {
       });
     }
 
+    const updateData = {};
+
+    if (companyName !== undefined) {
+      updateData.companyName = companyName;
+    }
+
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+
+    if (website !== undefined) {
+      updateData.website = website;
+    }
+
+    if (location !== undefined) {
+      updateData.location = location;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide at least one field to update",
+      });
+    }
+
     //?FETCH DATA AND UPDATE BY ID
     const comapnyUpdate = await companyModel.findByIdAndUpdate(
       companyId,
-      req.body,
+      updateData,
     );
 
     return res.status(200).send({
@@ -144,6 +170,13 @@ const deleteCompany = async (req, res) => {
       return res.status(400).send({
         success: false,
         message: "Company id required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid Company ID",
       });
     }
 

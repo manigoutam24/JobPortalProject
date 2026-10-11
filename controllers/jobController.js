@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const Company = require("../models/companyModel");
 const JobModel = require("../models/jobModel");
 
@@ -191,7 +192,6 @@ const getJobById = async (req, res) => {
 
 const updateJob = async (req, res) => {
   try {
-    const { jobId } = req.params;
     const {
       title,
       description,
@@ -204,6 +204,22 @@ const updateJob = async (req, res) => {
       position,
     } = req.body;
 
+    const { jobId } = req.params;
+
+    if (!jobId) {
+      return res.status(400).send({
+        success: false,
+        meassage: "Job ID is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Job ID",
+      });
+    }
+
     const job = await JobModel.findById(jobId).populate("company");
     if (!job) {
       return res.status(404).send({
@@ -211,6 +227,7 @@ const updateJob = async (req, res) => {
         message: "Job not Found",
       });
     }
+
     const ownership = job.createdBy.equals(req.user._id);
     if (!ownership) {
       return res.status(403).send({
@@ -219,20 +236,50 @@ const updateJob = async (req, res) => {
       });
     }
 
+    const updateData = {};
+
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    if (requirements !== undefined) {
+      updateData.requirements = requirements;
+    }
+    if (salary !== undefined) {
+      updateData.salary = salary;
+    }
+    if (location !== undefined) {
+      updateData.location = location;
+    }
+    if (jobType !== undefined) {
+      updateData.jobType = jobType;
+    }
+    if (experienceLevel !== undefined) {
+      updateData.experienceLevel = experienceLevel;
+    }
+    if (skills !== undefined) {
+      updateData.skills = skills;
+    }
+    if (position !== undefined) {
+      updateData.position = position;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide at least one field to update",
+      });
+    }
+
     const updatedJob = await JobModel.findByIdAndUpdate(
       jobId,
+      { $set: updateData },
       {
-        title,
-        description,
-        requirements,
-        salary,
-        location,
-        jobType,
-        experienceLevel,
-        skills,
-        position,
+        new: true,
+        runValidators: true,
       },
-      { new: true },
     );
 
     return res.status(200).send({
@@ -256,6 +303,13 @@ const deleteJob = async (req, res) => {
       return res.status(400).send({
         success: false,
         message: "Job ID is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid Job ID",
       });
     }
 

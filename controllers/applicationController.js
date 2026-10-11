@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const Application = require("../models/application");
 const JobModel = require("../models/jobModel");
 
@@ -190,6 +191,20 @@ const updateApplicationStatus = async (req, res) => {
 const deleteApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
+
+    if (!applicationId) {
+      return res.status(400).send({
+        success: false,
+        message: "Application Id is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid application ID",
+      });
+    }
 
     const application = await Application.findById(applicationId);
 
