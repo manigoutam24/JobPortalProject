@@ -6,6 +6,20 @@ const applyForJob = async (req, res) => {
   try {
     const { jobId } = req.params;
 
+    if (!jobId) {
+      return res.status(400).send({
+        success: false,
+        message: "Job Id is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invlid Job Id",
+      });
+    }
+
     const job = await JobModel.findById(jobId);
 
     if (!job) {
@@ -48,14 +62,14 @@ const applyForJob = async (req, res) => {
 
 const getMyApplications = async (req, res) => {
   try {
-    const currentUserId = req.user._id;
-
-    if (!currentUserId) {
-      return res.status(404).send({
+    if (!req.user || !req.user._id) {
+      return res.status(401).send({
         success: false,
-        message: "User not found",
+        message: "Unauthorized",
       });
     }
+
+    const currentUserId = req.user._id;
 
     const applications = await Application.find({
       applicant: currentUserId,
@@ -85,8 +99,45 @@ const getMyApplications = async (req, res) => {
 const getApplicants = async (req, res) => {
   try {
     const { jobId } = req.params;
+    const totalApplications = await Application.countDocuments({
+      job: jobId,
+    });
+
+    //! Pagination Methods
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+    const totalPages = Math.ceil(totalApplications / limit);
+    const skip = (page - 1) * limit;
+
+    if (
+      !Number.isInteger(page) ||
+      page <= 0 ||
+      !Number.isInteger(limit) ||
+      limit <= 0 ||
+      limit > 100
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pagination parameters",
+      });
+    }
+
+    if (!jobId) {
+      return res.status(400).send({
+        success: false,
+        message: "JobId is required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid Job ID",
+      });
+    }
 
     const job = await JobModel.findById(jobId);
+
     if (!job) {
       return res.status(404).send({
         success: false,
@@ -103,9 +154,11 @@ const getApplicants = async (req, res) => {
       });
     }
 
-    const applications = await Application.find({ job: jobId }).populate(
-      "applicant",
-    );
+    const applications = await Application.find({ job: jobId })
+      .populate("applicant", "fullName email skills profilePhoto")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
 
     if (applications.length === 0) {
       return res.status(404).send({
@@ -117,6 +170,10 @@ const getApplicants = async (req, res) => {
     return res.status(200).send({
       success: true,
       message: "Application found",
+      totalApplications,
+      currentPage: page,
+      totalPages,
+      limit,
       applications,
     });
   } catch (error) {
@@ -132,7 +189,28 @@ const updateApplicationStatus = async (req, res) => {
   try {
     const { applicationId } = req.params;
 
+    if (!applicationId) {
+      return res.status(400).send({
+        success: false,
+        message: "Applicant ID is Required",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid Application ID",
+      });
+    }
+
     const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid application status",
+      });
+    }
 
     const application = await Application.findById(applicationId);
 
