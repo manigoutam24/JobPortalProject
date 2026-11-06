@@ -8,8 +8,20 @@ const multer = require("multer");
 
 const app = express();
 
+const PORT = process.env.PORT || 8080;
 //mongodbConnection
-connectDB();
+const startServer = async () => {
+  try {
+    await connectDB();
+
+    app.listen(PORT, () => {
+      console.log(`Server is listening on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exit(1);
+  }
+};
 
 //middleware
 app.use(express.json());
@@ -83,6 +95,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server is listening on port ${process.env.PORT}`);
-});
+startServer();
