@@ -3,13 +3,14 @@ const bcrypt = require("bcrypt");
 const JWT = require("jsonwebtoken");
 const getDataUri = require("../utils/dataUri");
 const cloudinary = require("../config/cloudinary");
+const Application = require("../models/application");
 
 const registerController = async (req, res) => {
   try {
-    const { fullName, email, password, phone } = req.body;
+    const { fullName, email, password, phone, role } = req.body;
 
     //! validdate
-    if (!fullName || !email || !password || !phone) {
+    if (!fullName || !email || !password || !phone || !role) {
       return res.status(400).send({
         success: false,
         message: "Required all fields!",
@@ -43,7 +44,7 @@ const registerController = async (req, res) => {
       fullName,
       email,
       password: hashPassword,
-      role: "student",
+      role,
       phone,
     });
 
@@ -114,13 +115,14 @@ const loginController = async (req, res) => {
       user: {
         email: user.email,
         id: user._id,
+        role: user.role,
         // fullname: user.fullname,
       },
     });
   } catch (error) {
     console.log(error);
 
-    res.status(500).send({
+    return res.status(500).send({
       success: false,
       message: "Login API",
     });
@@ -152,14 +154,20 @@ const updateProfile = async (req, res) => {
   try {
     let { fullName, phoneNumber, bio, skills } = req.body;
 
-    if (
-      (fullName !== undefined && fullName.trim().length < 3) ||
-      !/^[A-Za-z ]+$/.test(fullName.trim())
-    ) {
-      return res.status(400).send({
-        success: false,
-        message: "Name must be at least 3 characters",
-      });
+    const user = req.user;
+
+    if (fullName !== undefined) {
+      if (
+        typeof fullName !== "string" ||
+        fullName.trim().length < 3 ||
+        !/^[A-Za-z ]+$/.test(fullName.trim())
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Name must be at least 3 characters and contain only letters",
+        });
+      }
     }
 
     if (phoneNumber !== undefined && !/^\d{10}$/.test(phoneNumber)) {
@@ -188,7 +196,7 @@ const updateProfile = async (req, res) => {
 
       const normalzedSkill = skillList.map((skill) => skill.toLowerCase());
 
-      const uniqueSkills = new Set(skillList);
+      const uniqueSkills = new Set(normalzedSkill);
 
       if (normalzedSkill.length > uniqueSkills.size) {
         return res.status(400).send({
@@ -215,7 +223,6 @@ const updateProfile = async (req, res) => {
     }
 
     //?from isAuthenticated Middleware
-    const user = req.user;
 
     //from request.file
     const file = req.file;
@@ -388,6 +395,51 @@ const changePassword = async (req, res) => {
   }
 };
 
+const studentDashboard = async (req, res) => {
+  try {
+    const [
+      totalApplications,
+      pendingApplications,
+      acceptedApplications,
+      rejectedApplications,
+    ] = await Promise.all([
+      Application.countDocuments({
+        applicant: req.user._id,
+      }),
+      Application.countDocuments({
+        applicant: req.user._id,
+        status: "Applied",
+      }),
+      Application.countDocuments({
+        applicant: req.user._id,
+        status: "Accepted",
+      }),
+      Application.countDocuments({
+        applicant: req.user._id,
+        status: "Rejected",
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Student dashboard fetched successfully",
+      data: {
+        totalApplications,
+        pendingApplications,
+        acceptedApplications,
+        rejectedApplications,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server Error",
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   registerController,
@@ -396,4 +448,5 @@ module.exports = {
   updateProfilePhoto,
   logoutController,
   changePassword,
+  studentDashboard,
 };

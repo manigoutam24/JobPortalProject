@@ -9,7 +9,7 @@ const getAllUser = async (req, res) => {
     // console.log("USER:", req.user);
     // console.log("ROLE:", req.user.role);
 
-    const users = await User.find();
+    const users = await User.find().select("-password");
 
     // console.log("USERS:", users);
 
@@ -66,6 +66,20 @@ const getUserById = async (req, res) => {
 const deleteUser = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is not found",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid User ID",
+      });
+    }
 
     const user = await User.findById(userId).select("-password");
 
@@ -129,7 +143,15 @@ const deleteCompany = async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Company ID",
+      });
+    }
+
     const company = await Company.findById(companyId);
+
     if (!company) {
       return res.status(404).send({
         success: false,
@@ -191,6 +213,13 @@ const deleteJob = async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Job ID",
+      });
+    }
+
     const job = await JobModel.findById(jobId);
 
     if (!job) {
@@ -220,7 +249,7 @@ const deleteJob = async (req, res) => {
 const getAllApplications = async (req, res) => {
   try {
     const applications = await Application.find()
-      .populate("applicant")
+      .populate("applicant", "-password")
       .populate("job");
 
     if (applications.length === 0) {
@@ -296,14 +325,14 @@ const deleteApplication = async (req, res) => {
     if (!applicationId) {
       return res.status(400).send({
         success: false,
-        message: "Appliaction ID not fetched",
+        message: "Appliaction ID is required",
       });
     }
 
     if (!mongoose.Types.ObjectId.isValid(applicationId)) {
       return res.status(400).send({
         success: false,
-        message: "Application Id not Fetched",
+        message: "Invalid Application ID",
       });
     }
 
@@ -311,7 +340,7 @@ const deleteApplication = async (req, res) => {
     if (!application) {
       return res.status(404).send({
         success: false,
-        message: "Application not Fetched",
+        message: "Application not found",
       });
     }
 
@@ -327,10 +356,47 @@ const deleteApplication = async (req, res) => {
 
     return res.status(500).send({
       success: false,
-      message: "Something went Wrong in API",
+      message: "Internal server Error",
     });
   }
 };
+
+const adminDashboardController = async (req, res) => {
+  try {
+    const [
+      totalStudent,
+      totalRecruiters,
+      totalCompanies,
+      totalJobs,
+      totalApplications,
+    ] = await Promise.all([
+      User.countDocuments({ role: "student" }),
+      User.countDocuments({ role: "recruiter" }),
+      Company.countDocuments(),
+      JobModel.countDocuments(),
+      Application.countDocuments(),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin dashboard statistics fetched successfully",
+      totalStudent,
+      totalRecruiters,
+      totalCompanies,
+      totalJobs,
+      totalApplications,
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
 
 module.exports = {
   getAllUser,
@@ -343,4 +409,5 @@ module.exports = {
   getAllApplications,
   getApplicationById,
   deleteApplication,
+  adminDashboardController,
 };

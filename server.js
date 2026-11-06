@@ -23,6 +23,7 @@ app.use("/company", require("./routes/companyRoute"));
 app.use("/job", require("./routes/jobRoute"));
 app.use("/application", require("./routes/applicationRoute"));
 app.use("/admin", require("./routes/adminRoute"));
+app.use("/recruiter", require("./routes/recruiterRoute"));
 
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
@@ -46,14 +47,42 @@ app.use((err, req, res, next) => {
     });
   }
 
-  console.error(err);
+  if (err.name === "CastError") {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID format",
+    });
+  }
+
+  if (err.name === "ValidationError") {
+    return res.status(400).json({
+      success: false,
+      message: "Validation failed",
+    });
+  }
+
+  if (err.code === 11000) {
+    return res.status(409).json({
+      success: false,
+      message: "Duplicate value already exists",
+    });
+  }
+
+  if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
+  }
+
+  console.error(err.stack || err);
 
   return res.status(500).json({
     success: false,
-    message: "Something went wrong",
+    message: "Internal Server Error",
   });
 });
 
 app.listen(process.env.PORT, () => {
-  console.log(`Port is listen on ${process.env.PORT}`);
+  console.log(`Server is listening on port ${process.env.PORT}`);
 });

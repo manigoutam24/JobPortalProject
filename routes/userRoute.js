@@ -7,6 +7,7 @@ const {
   logoutController,
   changePassword,
   getProfile,
+  studentDashboard,
 } = require("../controllers/userController");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const upload = require("../middlewares/multer");
@@ -36,5 +37,7 @@ router.put(
 router.post("/logout", isAuthenticated, logoutController);
 
 router.put("/change-password", isAuthenticated, changePassword);
+
+router.get("/dashboard", isAuthenticated, studentDashboard);
 
 module.exports = router;

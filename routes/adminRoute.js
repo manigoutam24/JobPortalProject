@@ -1,6 +1,7 @@
 const express = require("express");
 const isAuthenticated = require("../middlewares/isAuthenticated");
 const isAdmin = require("../middlewares/isAdmin");
+const isRecruiter = require("../middlewares/isRecruiter");
 const {
   getAllUser,
   getUserById,
@@ -12,6 +13,8 @@ const {
   getAllApplications,
   getApplicationById,
   deleteApplication,
+  adminDashboardController,
+  recruiterDashboard,
 } = require("../controllers/adminController");
 
 const router = express.Router();
@@ -45,5 +48,7 @@ router.delete(
   isAdmin,
   deleteApplication,
 );
+
+router.get("/dashboard", isAuthenticated, isAdmin, adminDashboardController);
 
 module.exports = router;
