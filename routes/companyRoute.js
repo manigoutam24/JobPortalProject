@@ -10,6 +10,7 @@ const {
   deleteCompany,
   updateCompanyLogo,
 } = require("../controllers/companyController");
+const uploadCompanyLogo = require("../middlewares/uploadCompanyLogo");
 const router = express.Router();
 
 router.post("/create", isAuthenticated, createCompany);
@@ -21,7 +22,7 @@ router.delete("/:companyId", isAuthenticated, deleteCompany);
 router.put(
   "/:companyId/logo",
   isAuthenticated,
-  upload.single("logo"),
+  uploadCompanyLogo.single("logo"),
   updateCompanyLogo,
 );
 
